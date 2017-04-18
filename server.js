@@ -6,10 +6,10 @@ var fs = require('fs');
 
 app.set('port', (process.env.PORT || 5000));
 
-app.use(express.static(__dirname + '/public'));
+// app.use(express.static(__dirname + '/public'));
 
 app.use(function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Origin", "*"); // eventually only allow from IDEO domains???
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   next();
 });
@@ -17,9 +17,9 @@ app.use(function(req, res, next) {
 
 
 
-			// views is directory for all template files
-			app.set('views', __dirname + '/views');
-			app.set('view engine', 'ejs');
+			// // views is directory for all template files
+			// app.set('views', __dirname + '/views');
+			// app.set('view engine', 'ejs');
 
 app.get('/', function(request, response) {
   response.render('pages/index');
@@ -68,7 +68,9 @@ var combineParameters = function(param1, param2) {
 }
 
 
-
+var sendGetRequest = function(base_url, paramaters) {
+// helper for external_api
+}
 
 
 
