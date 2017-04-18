@@ -15,9 +15,9 @@ app.use(function(req, res, next) {
 
 
 /* ------------- if you want to implement a view with this server ------------- */
-    app.get('/', function(request, response) {
-      response.sendFile(__dirname + '/view.html')
-    });
+    // app.get('/', function(request, response) {
+    //   response.sendFile(__dirname + '/view.html')
+    // });
 
     // assumes you previously added a view.html file in same directory
 /* ---------------------------------------------------------------------------- */

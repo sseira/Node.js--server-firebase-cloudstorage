@@ -1,11 +1,11 @@
 {
-  "name": "node-js-getting-started",
-  "version": "0.2.6",
-  "description": "A sample Node.js app using Express 4",
+  "name": "simple-server",
+  "version": "1.0.0",
+  "description": "A simple server built to connect devices",
   "engines": {
-    "node": "6.10.2"
+    "node": "4.5.0"
   },
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
