@@ -1,10 +1,32 @@
-# node-simple-server
+# simple-node-server
 
 A barebones Node.js app using [Express 4](http://expressjs.com/).
 
-## Running Locally
 
-Make sure you have [Node.js](http://nodejs.org/) and the [Heroku CLI](https://cli.heroku.com/) installed.
+## Connections:
+
+
+### firebase
+
+### http requests 
+
+### Google Maps API
+
+### Arduino/RasberryPI
+
+### Slack
+
+### Framer.js
+
+### Firebase
+
+
+
+
+
+
+
+## Running Locally
 
 ```sh
 $ npm install
