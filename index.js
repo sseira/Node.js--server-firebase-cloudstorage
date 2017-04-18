@@ -20,6 +20,43 @@ app.listen(app.get('port'), function() {
 
 
 
+/*--------------- Request Helper Functions ----------------*/
+
+// params = [{key: value},...{key: value}]
+var encodeParameters = function(params) {
+  if (!params) return ''
+  var encoded_params = '?'
+
+  params.map(function(param_obj) {
+    var key = encodeURIComponent(Object.keys(param_obj)[0]),
+        value = encodeURIComponent(param_obj[key])
+    encoded_params = encoded_params.concat(key +'='+ value +'&')
+  })
+
+  return encoded_params.substring(0, encoded_params.length-1)     // take out last &
+}
+
+var getParameters = function(request) {
+  var keys = Object.keys(request.query),
+      params = keys.map(function(key){
+        var param_obj = {}
+        param_obj[key] = request.query[key]
+        return param_obj
+      })
+
+  return  params
+}
+
+var findParameterByKey = function(params, key) {
+  return params.find(function(param_obj) { return Object.keys(param_obj)[0] === key })
+}
+
+var combineParameters = function(param1, param2) {
+  return param1.concat(param2)
+}
+
+
+
 
 
 
