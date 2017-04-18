@@ -1,13 +1,25 @@
 var express = require('express');
 var app = express();
+var https = require('https');
+var fs = require('fs');
+
 
 app.set('port', (process.env.PORT || 5000));
 
 app.use(express.static(__dirname + '/public'));
 
-// views is directory for all template files
-app.set('views', __dirname + '/views');
-app.set('view engine', 'ejs');
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
+
+
+
+
+			// views is directory for all template files
+			app.set('views', __dirname + '/views');
+			app.set('view engine', 'ejs');
 
 app.get('/', function(request, response) {
   response.render('pages/index');
@@ -66,10 +78,11 @@ var combineParameters = function(param1, param2) {
 
 app.get('/external_api', function(request, response) {
 
-console.log(request)
+console.log('requesting')
   var example_recipe_app_id = 'c5bd1e1a',
       example_recipe_key = '2b746487bce0eb83675174a4429c1a94',
-      server_params = [{app_id:example_recipe_app_id}, {app_key:example_recipe_key}]
+      // server_params = [{app_id:example_recipe_app_id}, {app_key:example_recipe_key}]
+      server_params = [{app_id:example_recipe_app_id}, {app_key:example_recipe_key}, {q: 'tomato soup'}]
       example_recipe_base_url = 'https://api.edamam.com/search',
       user_params = getParameters(request),
       encoded_params = encodeParameters(combineParameters(server_params, user_params)),
