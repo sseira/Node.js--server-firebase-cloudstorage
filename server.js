@@ -9,12 +9,10 @@ app.use(function(req, res, next) {
   next();
 });
 
-
 /* ------------- if you want to implement a view with this server ------------- */
     // app.get('/', function(request, response) {
     //   response.sendFile(__dirname + '/view.html')
     // });
-
     // assumes you previously added a view.html file in same directory
 /* ---------------------------------------------------------------------------- */
 
@@ -24,8 +22,10 @@ app.listen(app.get('port'), function() {
 
 
 
-
-/*--------------- Request Helper Functions ----------------*/
+/* ------------------------------------------------------------------------------------------
+   -------------------------------- Request Helper Functions --------------------------------
+   ------------------------------------------------------------------------------------------
+*/
 
 // params = [{key: value},...{key: value}]
 var encodeParameters = function(params) {
@@ -63,31 +63,8 @@ var combineParameters = function(param1, param2) {
 }
 
 
-var sendGetRequest = function(base_url, paramaters) {
-// helper for external_api
-}
-
-
-
-/* --------------- Call External API ---------------- 
-  best to keep sensitive data such as API keys in the server side
-*/
-var https = require('https')
-
-app.get('/external_api', function(request, response) {
-
-  var example_recipe_app_id = 'c5bd1e1a',
-      example_recipe_key = '2b746487bce0eb83675174a4429c1a94',
-      // server_params = [{app_id:example_recipe_app_id}, {app_key:example_recipe_key}]
-      server_params = [{app_id:example_recipe_app_id}, {app_key:example_recipe_key}, {q: 'tomato soup'}]
-      example_recipe_base_url = 'https://api.edamam.com/search',
-      user_params = getParameters(request),
-      encoded_params = encodeParameters(combineParameters(server_params, user_params)),
-      url = example_recipe_base_url + encoded_params
-
-      console.log(url)
-  // combine user and server parameters
-
+var sendGetRequest = function(url, server_response) {
+  
   https.get(url, (res) => {
      const statusCode = res.statusCode
      const contentType = res.headers['content-type']
@@ -109,7 +86,6 @@ app.get('/external_api', function(request, response) {
      }
  
      //-------- reading in data chunk by chunk ------------
-
      res.setEncoding('utf8')
      var rawData = ''
      res.on('data', (chunk) => rawData += chunk)
@@ -118,8 +94,8 @@ app.get('/external_api', function(request, response) {
      res.on('end', () => {
        try {
          var parsedData = JSON.parse(rawData)
-         response.json(parsedData)
-         console.log(parsedData)
+         // return parsedData to requester in response object 
+         server_response.json(parsedData)
        } catch (e) {
          console.log(e.message)
        }
@@ -127,13 +103,104 @@ app.get('/external_api', function(request, response) {
   }).on('error', (e) => {
      console.log(`Got error: ${e.message}`)
   });
+}
+
+
+var sendPostRequest = function(host_name, path, data, server_response) {
+
+
+ data = JSON.stringify(data)
+
+  const options = {
+    hostname: host_name,
+    port: 443,
+    path: '/' + path,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Content-Length': Buffer.byteLength(data)
+    }
+  };
+
+  const req = https.request(options, (res) => {
+    // console.log('statusCode:', res.statusCode)
+    // console.log('headers:', res.headers)
+
+    res.on('data', (d) => {
+      // process.stdout.write(d)
+    })
+
+    res.on('end', () => {
+      // console.log('Data sent')
+      server_response.end()
+    });
+  })
+
+  req.on('error', (e) => {
+    console.error(e);
+  })
+  // write data to request body
+  req.write(data)
+
+  req.end()
+}
+
+
+/* ------------------------------------------------------------------------------------------
+   ----------------------------------- Call External API -----------------------------------
+   ------------------------------------------------------------------------------------------
+   Ex: 
+*/
+/* best to keep sensitive data such as API keys in the server side */
+var https = require('https')
+
+app.get('/external_api', function(request, response) {
+
+  var example_recipe_app_id = 'c5bd1e1a',
+      example_recipe_key = '2b746487bce0eb83675174a4429c1a94',
+      example_recipe_base_url = 'https://api.edamam.com/search',
+      // server_params = [{app_id:example_recipe_app_id}, {app_key:example_recipe_key}]
+      server_params = [{app_id:example_recipe_app_id}, {app_key:example_recipe_key}, {q: 'tomato soup'}]
+      user_params = getParameters(request),
+      encoded_params = encodeParameters(combineParameters(server_params, user_params)),
+      url = example_recipe_base_url + encoded_params
+
+      sendGetRequest(url, response)
+      
+})
+
+/* 
+   ------------------------------------------------------------------------------------------
+   --------------------------------- Message Slack Channel ----------------------------------
+   ------------------------------------------------------------------------------------------
+   Ex: https://localhost:5000/slack?text=helloFromAfar
+*/
+
+app.get('/slack', function(request, response) {
+  var slack_host_name = 'hooks.slack.com',
+      example_channel_path = 'services/T02JA9HE6/B52B8BBAT/wIlxSfddWFms9zC7DCtSuJvw',
+      user_params = getParameters(request),
+      user_message = {text: findParameterByKey(user_params, 'text')}
+      // encoded_params = encodeParameters(combineParameters(server_params, user_params)),
+      // url = example_recipe_base_url + encoded_params
+
+
+      sendPostRequest(slack_host_name, example_channel_path, user_message, response)
 })
 
 
 
 
 
-/*--------------- Access Firebase Database ---------------- */
+// curl -X POST -H 'Content-type: application/json' --data '{"text":"Hello, World!"}' https://hooks.slack.com/services/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
+// Copy
+
+
+/* ------------------------------------------------------------------------------------------
+   --------------------------------- Access Firebase Database -------------------------------
+   ------------------------------------------------------------------------------------------
+*/
+
 var firebase = require("firebase")
 
 var initializeFirebase = function() {
@@ -152,8 +219,9 @@ var initializeFirebase = function() {
     tableRef.on('value', function(snapshot) {
       doSomethingBasedOnData(snapshot.val());
     });
-  }('users')
+  }
 
+  // listenForChanges('users')
 
 }()
 
@@ -202,16 +270,13 @@ app.get('/database', function(request, response) {
 
 
 
-// http://localhost:5000/database?username=sana&data=lotsofdata&userID=111
 
+/* ------------------------------------------------------------------------------------------
+   --------------------------------- Get Google Directions ----------------------------------
+   ------------------------------------------------------------------------------------------
+*/
 
-
-
-
-
-
-
-/*--------------- Get Google Directions ----------------
+/*
 
   Google Directions API blocks your key if it is called too much
   Also, modify algorithm to get simple A->B directions for next stop and B->C->...->X for the rest of stops
