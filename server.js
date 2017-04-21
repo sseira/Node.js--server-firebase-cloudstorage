@@ -1,7 +1,13 @@
 var express = require('express');
 var app = express();
+var https = require('https')
+var bodyParser = require('body-parser');
+var fs = require('fs');
 
 app.set('port', (process.env.PORT || 5000));
+
+app.use(bodyParser.json()); // support json encoded bodies
+app.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
 
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*"); // eventually only allow from IDEO domains???
@@ -53,6 +59,7 @@ var getParameters = function(request) {
 }
 
 var findParameterByKey = function(params, key) {  
+
   var found_obj = params.find(function(param_obj) { return Object.keys(param_obj)[0] === key })
 
   return found_obj[key]
@@ -108,7 +115,6 @@ var sendGetRequest = function(url, server_response) {
 
 var sendPostRequest = function(host_name, path, data, server_response) {
 
-
  data = JSON.stringify(data)
 
   const options = {
@@ -131,7 +137,7 @@ var sendPostRequest = function(host_name, path, data, server_response) {
     })
 
     res.on('end', () => {
-      // console.log('Data sent')
+      console.log('Data sent')
       server_response.end()
     });
   })
@@ -152,7 +158,6 @@ var sendPostRequest = function(host_name, path, data, server_response) {
    Ex: 
 */
 /* best to keep sensitive data such as API keys in the server side */
-var https = require('https')
 
 app.get('/external_api', function(request, response) {
 
@@ -173,17 +178,14 @@ app.get('/external_api', function(request, response) {
    ------------------------------------------------------------------------------------------
    --------------------------------- Message Slack Channel ----------------------------------
    ------------------------------------------------------------------------------------------
-   Ex: https://localhost:5000/slack?text=helloFromAfar
+   Ex: http://localhost:5000/slack?text=hiSlack
 */
 
 app.get('/slack', function(request, response) {
   var slack_host_name = 'hooks.slack.com',
       example_channel_path = 'services/T02JA9HE6/B52B8BBAT/wIlxSfddWFms9zC7DCtSuJvw',
       user_params = getParameters(request),
-      user_message = {text: findParameterByKey(user_params, 'text')}
-      // encoded_params = encodeParameters(combineParameters(server_params, user_params)),
-      // url = example_recipe_base_url + encoded_params
-
+      user_message = {text: encodeParameters(findParameterByKey(user_params, 'text'))}
 
       sendPostRequest(slack_host_name, example_channel_path, user_message, response)
 })
@@ -191,24 +193,31 @@ app.get('/slack', function(request, response) {
 
 
 
-
-// curl -X POST -H 'Content-type: application/json' --data '{"text":"Hello, World!"}' https://hooks.slack.com/services/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
-// Copy
-
-
 /* ------------------------------------------------------------------------------------------
    --------------------------------- Access Firebase Database -------------------------------
    ------------------------------------------------------------------------------------------
 */
 
+// TODO
+// explore authentication
+// signin through a front end button
+// expect that front end apps have an authentication and they send the auth token with the request?
+// store a global variable of signed in user 
+// explore notifications
+
+
+
 var firebase = require("firebase")
+const Storage = require('@google-cloud/storage');
+
 
 var initializeFirebase = function() {
   var config = {
     apiKey: "AIzaSyC-dEU8rrYcPZjIyiD5paZFaWGLrGSjK4Q",
     authDomain: "exampledatabase-b0ae3.firebaseapp.com",
-    databaseURL: "https://exampledatabase-b0ae3.firebaseio.com",
-    storageBucket: "exampledatabase-b0ae3.appspot.com",
+    databaseURL: "https://exampledatabase-b0ae3.firebaseio.com"
+    // ,
+    // storageBucket: "exampledatabase-b0ae3.appspot.com",
   }
 
   firebase.initializeApp(config)
@@ -225,15 +234,123 @@ var initializeFirebase = function() {
 
 }()
 
-// TODO
-// explore authentication
-// explore notifications
+// --------------- initialize cloud storage reference --------------
+var storageBucket = function() {
+  // Your Google Cloud Platform project ID
+  const projectId = 'exampledatabase-b0ae3';
+
+  // Instantiates a client
+  const storageClient = Storage({
+    projectId: projectId,
+    keyFilename: 'private_key_SECRET.json'
+  });
+
+  return storageClient.bucket('exampledatabase-b0ae3.appspot.com')
+}()
+
+
+
+// how to upload image_blob, not local ./test_img
+var uploadImage = function(image_blob, image_name) {
+
+    var image_blob = './test_img.JPG'
+    var options = {
+      destination: 'images/' + image_name
+    }
+
+    storageBucket.upload(image_blob, options, function(err, file) {
+      if (!err) {
+        console.log(`File ${file.name} uploaded.`)
+      } else {
+        console.log('error uploading')
+      }
+    })
+}
+
+
+// how to download to local memory not to local storage
+// do we want to download local data or do we want to just pass the link url so others can access through that???
+var downloadImage = function(image_name) {
+
+  var image_file = storageBucket.file('images/'+image_name)
+
+// ---------------- DOWNLOAD IMAGE  ------------------
+
+  // image_file.download({
+  //   destination: 'test_deco3mp.jpg'
+  // }, function(err) {
+  //   console.log(err)
+  // });
+
+
+
+// ----------- write stream --------------
+// var fs = require('fs');
+// var remoteFile = bucket.file('image.png');
+// var localFilename = '/Users/stephen/Photos/image.png';
+
+// remoteFile.createReadStream()
+//   .on('error', function(err) {})
+//   .on('response', function(response) {
+//     // Server connected and responded with the specified status and headers.
+//    })
+//   .on('end', function() {
+//     // The file is fully downloaded.
+//   })
+//   .pipe(fs.createWriteStream(localFilename));
+
+
+
+
+
+// // ---------------- GET IMAGE FILE ------------------
+
+//   image_file.get().then(function(data){
+//     var file = data[0],
+//         apiResponse = data[1]
+
+//   })
+
+// ---------------- GET IMAGE URL ------------------
+  var config = {
+    action: 'read',
+    expires: '03-17-2025'
+  };
+
+  image_file.getSignedUrl(config, function(err, url) {
+    if (err) {
+      console.error(err);
+      return
+    }
+    console.log(url)
+
+  });
+
+}
+
 
 var doSomethingBasedOnData = function(newData) {
   console.log('finally')
   console.log(newData)
 }
 
+
+// app.post
+app.get('/storage', function(request, response) {
+  
+  // var image_file = new Blob(["Rough Draft ...."], "Draft1.img")
+  // var local_img = fs.readFileSync('test_img.jpg')
+
+
+  downloadImage('new.jpg')
+  uploadImage(null, 'datnewnew.jpg')
+  response.end()
+})
+// 
+
+
+
+// split up to database/read --- database/write
 app.get('/database', function(request, response) {
 
   function writeUserData(userID, name, data) {
@@ -301,6 +418,12 @@ var googleMapsDirectionsClient = require('@google/maps').createClient({
 
 
 app.get('/googleDirections', function(request, response) {
+
+
+  //testing
+  console.log(request.param('origin'))
+  // ---------
+
 
   var params = getParameters(request),
       origin = findParameterByKey(params, 'origin'),
