@@ -1,7 +1,7 @@
 var express = require('express');
 var app = express();
 var https = require('https')
-var bodyParser = require('body-parser');
+var bodyParser = require('body-parser'); // do i still need these?
 var fs = require('fs');
 
 app.set('port', (process.env.PORT || 5000));
@@ -16,9 +16,9 @@ app.use(function(req, res, next) {
 });
 
 /* ------------- if you want to implement a view with this server ------------- */
-    // app.get('/', function(request, response) {
-    //   response.sendFile(__dirname + '/view.html')
-    // });
+    app.get('/', function(request, response) {
+      response.sendFile(__dirname + '/view.html')
+    });
     // assumes you previously added a view.html file in same directory
 /* ---------------------------------------------------------------------------- */
 
@@ -207,8 +207,19 @@ app.get('/slack', function(request, response) {
 
 
 
-var firebase = require("firebase")
-const Storage = require('@google-cloud/storage');
+const firebase = require("firebase")
+const Storage = require('@google-cloud/storage')
+// Multer is required to process file uploads and make them available via req.files.
+const multer = require('multer')
+var upload = multer({
+              storage: multer.memoryStorage(),
+              limits: {
+                fileSize: 5 * 1024 * 1024 // no larger than 5mb, you can change as needed.
+              }
+            })
+const format = require('util').format;
+
+
 
 
 var initializeFirebase = function() {
@@ -216,8 +227,6 @@ var initializeFirebase = function() {
     apiKey: "AIzaSyC-dEU8rrYcPZjIyiD5paZFaWGLrGSjK4Q",
     authDomain: "exampledatabase-b0ae3.firebaseapp.com",
     databaseURL: "https://exampledatabase-b0ae3.firebaseio.com"
-    // ,
-    // storageBucket: "exampledatabase-b0ae3.appspot.com",
   }
 
   firebase.initializeApp(config)
@@ -250,22 +259,67 @@ var storageBucket = function() {
 
 
 
-// how to upload image_blob, not local ./test_img
-var uploadImage = function(image_blob, image_name) {
 
-    var image_blob = './test_img.JPG'
-    var options = {
-      destination: 'images/' + image_name
+var uploadFile = function(file_name, file_data, file_type, response) {
+  // Create a new blob in the bucket and upload the file data.
+  const blob = storageBucket.file(file_name),
+        stream = blob.createWriteStream({
+          metadata: {
+            contentType: file_type
+          }
+        })
+
+  stream.on('error', (err) => {
+    // next(err);
+    response.send(error)
+    return
+  });
+
+  stream.on('finish', () => {
+    // using a signed URL, NOT SECURE
+    // The public URL can be used to directly access the file via HTTP.
+
+    //store public url in firebase db 
+    var config = {
+      action: 'read',
+      expires: '03-17-2025'
+    };
+    blob.getSignedUrl(config, function(err, url) {
+      if (err) {
+        console.error(err);
+        response.send(error)
+        return
+      }
+      writeData('images', Date.now(), {url: url}) // could also send response through here
+
+      response.status(200).send(url);
+      // const publicUrl = format(`https://storage.googleapis.com/${storageBucket.name}/${blob.name}`);
+
+    });
+  });
+
+  stream.end(file_data);
+}
+
+// assumes input file name = 'image' --- use .any() for all files 
+app.post('/upload', upload.single('image'), function(request, response) {
+
+
+    if (!request.file) {
+      response.status(400).send('No file uploaded.')
+      console.log('requst strangeness')
+      return
     }
 
-    storageBucket.upload(image_blob, options, function(err, file) {
-      if (!err) {
-        console.log(`File ${file.name} uploaded.`)
-      } else {
-        console.log('error uploading')
-      }
-    })
-}
+    var file_name = 'images/'+ Date.now() + request.file.originalname,
+        file_data = request.file.buffer,
+        file_type = request.file.mimetype
+
+    uploadFile(file_name, file_data, file_type, response)
+
+})
+
+
 
 
 // how to download to local memory not to local storage
@@ -276,11 +330,11 @@ var downloadImage = function(image_name) {
 
 // ---------------- DOWNLOAD IMAGE  ------------------
 
-  // image_file.download({
-  //   destination: 'test_deco3mp.jpg'
-  // }, function(err) {
-  //   console.log(err)
-  // });
+  image_file.download({
+    destination: 'test_deco3mp.jpg'
+  }, function(err) {
+    console.log(err)
+  });
 
 
 
@@ -312,57 +366,33 @@ var downloadImage = function(image_name) {
 //   })
 
 // ---------------- GET IMAGE URL ------------------
-  var config = {
-    action: 'read',
-    expires: '03-17-2025'
-  };
+  // var config = {
+  //   action: 'read',
+  //   expires: '03-17-2025'
+  // };
 
-  image_file.getSignedUrl(config, function(err, url) {
-    if (err) {
-      console.error(err);
-      return
-    }
-    console.log(url)
+  // image_file.getSignedUrl(config, function(err, url) {
+  //   if (err) {
+  //     console.error(err);
+  //     return
+  //   }
+  //   console.log(url)
 
-  });
+  // });
 
 }
 
 
-var doSomethingBasedOnData = function(newData) {
-  console.log('finally')
-  console.log(newData)
-}
 
 
-// app.post
-app.get('/storage', function(request, response) {
-  
-  // var image_file = new Blob(["Rough Draft ...."], "Draft1.img")
-  // var local_img = fs.readFileSync('test_img.jpg')
-
-
-  downloadImage('new.jpg')
-  uploadImage(null, 'datnewnew.jpg')
-  response.end()
-})
-// 
-
-
-
-// split up to database/read --- database/write
-app.get('/database', function(request, response) {
-
-  function writeUserData(userID, name, data) {
-    firebase.database().ref('users/' + userID).set({
-      username: name,
-      data: data
-    })
-    response.end()
+// data_params = {key: value, key1: value1}
+var writeData = function(path, id, data_params) {
+   
+    firebase.database().ref(path +'/' + id).set(data_params)
+    // response.end()
   }
 
-
-  function readUserData(userID) {
+var readUserData = function(userID, response) {
     var data = firebase.database().ref('/users/' + userID).once('value').then(function(snapshot) {
       var user = snapshot.val(),
           username = user.username
@@ -372,15 +402,18 @@ app.get('/database', function(request, response) {
     });
   }
 
-  var database = firebase.database(),
-      params = getParameters(request),
+// split up to database/read --- database/write
+app.get('/database', function(request, response) {
+
+  
+  var params = getParameters(request),
       userID = findParameterByKey(params, 'userID'),
       username = findParameterByKey(params, 'username'),
       data = findParameterByKey(params, 'data')
       
 
-  // writeUserData(userID, username, data)
-  readUserData(userID)
+  // writeData('users', userID, {username: username, data: data})
+  // readUserData(userID, response)
 
 })
 
