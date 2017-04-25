@@ -1,10 +1,11 @@
-var express = require('express');
-var app = express();
+var express = require('express')
+var app = express()
 var https = require('https')
-var bodyParser = require('body-parser'); // do i still need these?
-var fs = require('fs');
+var bodyParser = require('body-parser') // do i still need these?
+var fs = require('fs')
+require('dotenv').config()
 
-app.set('port', (process.env.PORT || 5000));
+app.set('port', (process.env.PORT || 5000))
 
 app.use(bodyParser.json()); // support json encoded bodies
 app.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
@@ -55,14 +56,14 @@ var getParameters = function(request) {
         return param_obj
       })
 
-  return  params
+  return  params ? params : ''
 }
 
 var findParameterByKey = function(params, key) {  
 
   var found_obj = params.find(function(param_obj) { return Object.keys(param_obj)[0] === key })
 
-  return found_obj[key]
+  return found_obj ? found_obj[key] : ''
 }
 
 var combineParameters = function(param1, param2) {
@@ -70,7 +71,7 @@ var combineParameters = function(param1, param2) {
 }
 
 
-var sendGetRequest = function(url, server_response) {
+var sendGetRequest = function(url, callback) {//server_response) {
   
   https.get(url, (res) => {
      const statusCode = res.statusCode
@@ -102,7 +103,9 @@ var sendGetRequest = function(url, server_response) {
        try {
          var parsedData = JSON.parse(rawData)
          // return parsedData to requester in response object 
-         server_response.json(parsedData)
+         callback(parsedData)
+
+         // server_response.json(parsedData)
        } catch (e) {
          console.log(e.message)
        }
@@ -113,7 +116,7 @@ var sendGetRequest = function(url, server_response) {
 }
 
 
-var sendPostRequest = function(host_name, path, data, server_response) {
+var sendPostRequest = function(host_name, path, data, callback) {//server_response) {
 
  data = JSON.stringify(data)
 
@@ -138,7 +141,8 @@ var sendPostRequest = function(host_name, path, data, server_response) {
 
     res.on('end', () => {
       console.log('Data sent')
-      server_response.end()
+      callback('success')
+      // server_response.end()
     });
   })
 
@@ -157,7 +161,12 @@ var sendPostRequest = function(host_name, path, data, server_response) {
    ------------------------------------------------------------------------------------------
    Ex: 
 */
-/* best to keep sensitive data such as API keys in the server side */
+/* 
+
+best to keep sensitive data such as API keys in the server side 
+move to .env 
+
+*/
 
 app.get('/external_api', function(request, response) {
 
@@ -170,7 +179,10 @@ app.get('/external_api', function(request, response) {
       encoded_params = encodeParameters(combineParameters(server_params, user_params)),
       url = example_recipe_base_url + encoded_params
 
-      sendGetRequest(url, response)
+      sendGetRequest(url, function(data) {
+        console.log(data)
+        response.json(data)
+      })
       
 })
 
@@ -178,17 +190,107 @@ app.get('/external_api', function(request, response) {
    ------------------------------------------------------------------------------------------
    --------------------------------- Message Slack Channel ----------------------------------
    ------------------------------------------------------------------------------------------
+
    Ex: http://localhost:5000/slack?text=hiSlack
 */
 
-app.get('/slack', function(request, response) {
-  var slack_host_name = 'hooks.slack.com',
-      example_channel_path = 'services/T02JA9HE6/B52B8BBAT/wIlxSfddWFms9zC7DCtSuJvw',
-      user_params = getParameters(request),
-      user_message = {text: encodeParameters(findParameterByKey(user_params, 'text'))}
+const SlackWebhook = require('@slack/client').IncomingWebhook,
+      SlackClient = require('@slack/client').WebClient
 
-      sendPostRequest(slack_host_name, example_channel_path, user_message, response)
+// cycle through colors?
+app.get('/slack', function(request, response) {
+
+  var url = process.env.SLACK_WEBHOOK_URL || '',
+      webhook = new SlackWebhook(url)
+      user_params = getParameters(request),
+      image_id = findParameterByKey(user_params, 'image_id') || 'image_id',
+      image_url = findParameterByKey(user_params, 'image_url') || 'https://storage.googleapis.com/exampledatabase-b0ae3.appspot.com/1Seira_Santi-Final%20(1).jpg',
+      // user_message = findParameterByKey(user_params, 'text'),
+      attachment = {
+        attachments: [
+          {
+            fallback: "Required plain-text summary of the attachment.",
+            color: "#36a64f",
+            text: "Optional text that appears within the attachment",
+            image_url: image_url,
+            callback_id: image_id,
+            ts: new Date().now,
+            actions: [
+                {
+                    "name": "game",
+                    "text": "Yes and!",
+                    "type": "button",
+                    "value": "chess"
+                },
+                {
+                    "name": "game",
+                    "text": "Yes, but maybe another one better",
+                    "type": "button",
+                    "value": "maze"
+                }
+            ]
+          }
+        ]
+      }
+
+      webhook.send(attachment, function(err, res) {
+        if (err) {
+            console.log('Error:', err);
+        } else {
+            console.log('Message sent: ', res);
+            response.end()
+        }
+      })
+
+      // slackBot(function(data) {
+      //   response.json(data)
+      // })
 })
+
+
+
+
+
+
+// can read and post winner
+var slackBot = function(callback) {
+
+  var token = process.env.SLACK_DOODLE_POLLSTER_TOKEN || '', //see section above on sensitive data
+      web = new SlackClient(token),
+      connected_server_channel_id = 'C50V9HAKT',
+      attachment = {
+        attachments: [
+          {
+            fallback: "Required plain-text summary of the attachment.",
+            color: "#36a64f",
+            text: "Today's winner is!",
+            ts: new Date().now,
+         
+          }
+        ]
+      }
+
+  web.chat.postMessage(connected_server_channel_id, 'text', attachment, function(err, res) {
+      if (err) {
+          console.log('Error:', err)
+          callback(err)
+      } else {
+          console.log('Message sent: ', res)
+          callback(res)
+      }
+  });
+
+  
+  // web.channels.history(connected_server_channel_id, function(err, res) {
+  //   if (err) {
+  //         console.log('Error:', err);
+  //         callback(err)
+  //     } else {
+  //         console.log('Message sent: ', res);
+  //         callback(res)
+  //     }
+  // })
+}
 
 
 
@@ -271,11 +373,16 @@ var uploadFile = function(file_name, file_data, file_type, response) {
 
   stream.on('error', (err) => {
     // next(err);
+      console.log('error')
+
     response.send(error)
     return
   });
+  console.log('chilllin')
 
   stream.on('finish', () => {
+
+    console.log('saved')
     // using a signed URL, NOT SECURE
     // The public URL can be used to directly access the file via HTTP.
 
@@ -290,9 +397,12 @@ var uploadFile = function(file_name, file_data, file_type, response) {
         response.send(error)
         return
       }
+
       writeData('images', Date.now(), {url: url}) // could also send response through here
 
       response.status(200).send(url);
+          console.log('url-'+url)
+
       // const publicUrl = format(`https://storage.googleapis.com/${storageBucket.name}/${blob.name}`);
 
     });
@@ -301,23 +411,41 @@ var uploadFile = function(file_name, file_data, file_type, response) {
   stream.end(file_data);
 }
 
-// assumes input file name = 'image' --- use .any() for all files 
-app.post('/upload', upload.single('image'), function(request, response) {
 
+// assumes input file name = 'image' --- use .any() for all files .single('image')
+app.post('/upload', upload.single('image'), function(request, response) {
 
     if (!request.file) {
       response.status(400).send('No file uploaded.')
       console.log('requst strangeness')
+
+      console.log('body')
+      console.log(request.body)
       return
-    }
+    } 
 
     var file_name = 'images/'+ Date.now() + request.file.originalname,
         file_data = request.file.buffer,
         file_type = request.file.mimetype
 
     uploadFile(file_name, file_data, file_type, response)
-
 })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
