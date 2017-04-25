@@ -248,15 +248,11 @@ app.get('/slack', function(request, response) {
 })
 
 
-
-
-
-
 // can read and post winner
 var slackBot = function(callback) {
 
   var token = process.env.SLACK_DOODLE_POLLSTER_TOKEN || '', //see section above on sensitive data
-      web = new SlackClient(token),
+      web_client = new SlackClient(token),
       connected_server_channel_id = 'C50V9HAKT',
       attachment = {
         attachments: [
@@ -270,7 +266,17 @@ var slackBot = function(callback) {
         ]
       }
 
-  web.chat.postMessage(connected_server_channel_id, 'text', attachment, function(err, res) {
+ 
+
+
+  readChannel(web_client, connected_server_channel_id, callback)
+  postToChannelAsBot(web_client, connected_server_channel_id, text, attachments, callback)
+}
+
+
+var postToChannelAsBot = function(web_client, channel_id, text, attachments, callback) {
+ 
+ web_client.chat.postMessage(channel_id, text, attachment, function(err, res) {
       if (err) {
           console.log('Error:', err)
           callback(err)
@@ -278,22 +284,37 @@ var slackBot = function(callback) {
           console.log('Message sent: ', res)
           callback(res)
       }
-  });
-
-  
-  // web.channels.history(connected_server_channel_id, function(err, res) {
-  //   if (err) {
-  //         console.log('Error:', err);
-  //         callback(err)
-  //     } else {
-  //         console.log('Message sent: ', res);
-  //         callback(res)
-  //     }
-  // })
+  })
 }
 
 
 
+var readChannel = function(web_client, channel_id, callback) {
+
+   web_client.channels.history(channel_id, function(err, res) {
+    if (err) {
+          console.log('Error:', err);
+          callback(err)
+      } else {
+          console.log('Message sent: ', res);
+          callback(res)
+      }
+  })
+}
+
+
+app.post('/slack-vote', function(request, response) {
+
+  console.log(request)
+  // response_url -> body = message
+
+  //  chat.update = message_ts value from origianl_message 
+  response.send({
+    "response_type": "ephemeral",
+    "replace_original": false,
+    "text": "I see you"
+  })
+})
 
 /* ------------------------------------------------------------------------------------------
    --------------------------------- Access Firebase Database -------------------------------
