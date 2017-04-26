@@ -315,14 +315,26 @@ var readChannel = function(web_client, channel_id, callback) {
 
 app.post('/slack-vote', function(request, response) {
 
-  // console.log(request)
+  
 
-  var payload = request.body.payload,
-      action = payload.actions[0],    // assuming a correct response everytime... maybe try catch?
-      value = action.value,
-      path = 'images',
-      id = payload.callback_id,
-      data_params = {value: value} // figure out how to increase 
+  var payload = request.body.payload
+  console.log('payload')
+  console.log(payload)
+
+  var action = payload.actions[0]   // assuming a correct response everytime... maybe try catch?
+  console.log('action')
+  console.log(action)
+
+  var value = action.value
+  console.log('value')
+  console.log(value)
+
+  var path = 'images'
+  var id = payload.callback_id
+  console.log('id')
+  console.log(id)
+
+  var data_params = {value: value} // figure out how to increase 
 
 
 
