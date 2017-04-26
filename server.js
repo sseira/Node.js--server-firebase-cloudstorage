@@ -326,7 +326,7 @@ app.post('/slack-vote', function(request, response) {
   
 
   var payload = JSON.parse(request.body.payload)
-      action = payload.actions.[0],
+      action = payload.actions[0],
       name = action.name,
       value = action.value, // YES or NO 
       path = 'images',
