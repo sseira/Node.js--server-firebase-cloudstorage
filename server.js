@@ -211,6 +211,10 @@ app.get('/slack', function(request, response) {
 
 
 var postImageToSlack = function(image_url, data_key, callback) {
+
+
+  console.log('slack webhook')
+  console.log(process.env.SLACK_WEBHOOK_URL)
   var url = process.env.SLACK_WEBHOOK_URL || '',
       webhook = new SlackWebhook(url),
       // user_params = getParameters(request),
@@ -495,6 +499,7 @@ app.post('/upload_image', upload.single('image'), function(request, response) {
         response.status(500).end()
       } else {
 
+        console.log('----- file uploaded, now posting to slack ----------')
         postImageToSlack(file_url, data_ref, function(err) {
           if(err) {
             response.status(500).end()
