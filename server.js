@@ -540,7 +540,7 @@ var uploadFile = function(file_name, file_data, file_type, callback) {
 
       var file_obj = {
         public_url: public_url,
-        time_stamp: new Date.now(),
+        time_stamp: Date.now(),
         yes_votes: 0,
         no_votes: 0
         // location???
