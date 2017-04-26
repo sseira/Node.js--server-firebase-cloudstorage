@@ -201,7 +201,11 @@ const SlackWebhook = require('@slack/client').IncomingWebhook,
 // image_post_request must generate an id 
 app.get('/slack', function(request, response) {
 
-  postImageToSlack('https://storage.googleapis.com/exampledatabase-b0ae3.appspot.com/1Seira_Santi-Final%20(1).jpg', 'image_id')
+  // postImageToSlack('https://storage.googleapis.com/exampledatabase-b0ae3.appspot.com/1Seira_Santi-Final%20(1).jpg', 'image_id')
+
+
+
+
 
       // slackBot(function(data) {
       //   response.json(data)
@@ -324,8 +328,15 @@ app.post('/slack-vote', function(request, response) {
   var payload = request.body.payload
   console.log('payload')
   console.log(payload)
+  console.log(Object.keys(payload))
 
-  var action = payload['actions'][0]   // assuming a correct response everytime... maybe try catch?
+  var actions = payload['actions']
+console.log('actions')
+  console.log(actions)
+
+
+
+  var action = actions[0]
   console.log('action')
   console.log(action)
 
