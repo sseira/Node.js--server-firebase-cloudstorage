@@ -198,13 +198,24 @@ const SlackWebhook = require('@slack/client').IncomingWebhook,
       SlackClient = require('@slack/client').WebClient
 
 // cycle through colors?
+// image_post_request must generate an id 
 app.get('/slack', function(request, response) {
 
+  postImageToSlack('https://storage.googleapis.com/exampledatabase-b0ae3.appspot.com/1Seira_Santi-Final%20(1).jpg', 'image_id')
+
+      // slackBot(function(data) {
+      //   response.json(data)
+      // })
+})
+
+
+
+var postImageToSlack = function(image_url, data_key, callback) {
   var url = process.env.SLACK_WEBHOOK_URL || '',
-      webhook = new SlackWebhook(url)
-      user_params = getParameters(request),
-      image_id = findParameterByKey(user_params, 'image_id') || 'image_id',
-      image_url = findParameterByKey(user_params, 'image_url') || 'https://storage.googleapis.com/exampledatabase-b0ae3.appspot.com/1Seira_Santi-Final%20(1).jpg',
+      webhook = new SlackWebhook(url),
+      // user_params = getParameters(request),
+      // image_id = findParameterByKey(user_params, 'image_id') || 'image_id',
+      // image_url = findParameterByKey(user_params, 'image_url') || 'https://storage.googleapis.com/exampledatabase-b0ae3.appspot.com/1Seira_Santi-Final%20(1).jpg',
       // user_message = findParameterByKey(user_params, 'text'),
       attachment = {
         attachments: [
@@ -213,39 +224,38 @@ app.get('/slack', function(request, response) {
             color: "#36a64f",
             text: "Optional text that appears within the attachment",
             image_url: image_url,
-            callback_id: image_id,
-            ts: new Date().now,
+            callback_id: data_key,
+            // ts: new Date().now,
             actions: [
                 {
-                    "name": "game",
-                    "text": "Yes and!",
+                    "name": "vote",
+                    "text": data_key,//"Yes and!",
                     "type": "button",
-                    "value": "chess"
+                    "value": "Yes"
                 },
                 {
-                    "name": "game",
-                    "text": "Yes, but maybe another one better",
+                    "name": "vote",
+                    "text": "Yes, but maybe...",
                     "type": "button",
-                    "value": "maze"
+                    "value": "No"
                 }
             ]
           }
         ]
       }
 
+      console.log(url)
+      console.log('about to send')
       webhook.send(attachment, function(err, res) {
         if (err) {
             console.log('Error:', err);
+            callback(err)
         } else {
             console.log('Message sent: ', res);
-            response.end()
+            callback()
         }
       })
-
-      // slackBot(function(data) {
-      //   response.json(data)
-      // })
-})
+}
 
 
 // can read and post winner
@@ -305,15 +315,45 @@ var readChannel = function(web_client, channel_id, callback) {
 
 app.post('/slack-vote', function(request, response) {
 
-  console.log(request)
+  // console.log(request)
+
+  var payload = request.body.payload,
+      action = payload.actions[0],    // assuming a correct response everytime... maybe try catch?
+      value = action.value,
+      path = 'images',
+      id = payload.callback_id,
+      data_params = {value: value} // figure out how to increase 
+
+
+
+
+  updateDataRow(path, id, data_params, function(err) {
+
+
+
+    //  chat.update = message_ts value from origianl_message 
+
+
+    response.send({
+      "response_type": "ephemeral",
+      "replace_original": false,
+      "text": value
+    })
+  })
+
+
+
   // response_url -> body = message
 
-  //  chat.update = message_ts value from origianl_message 
-  response.send({
-    "response_type": "ephemeral",
-    "replace_original": false,
-    "text": "I see you"
-  })
+
+
+
+
+  // response.send({
+  //   "response_type": "ephemeral",
+  //   "replace_original": false,
+  //   "text": "I see you"
+  // })
 })
 
 /* ------------------------------------------------------------------------------------------
@@ -331,18 +371,8 @@ app.post('/slack-vote', function(request, response) {
 
 
 const firebase = require("firebase")
-const Storage = require('@google-cloud/storage')
-// Multer is required to process file uploads and make them available via req.files.
-const multer = require('multer')
-var upload = multer({
-              storage: multer.memoryStorage(),
-              limits: {
-                fileSize: 5 * 1024 * 1024 // no larger than 5mb, you can change as needed.
-              }
-            })
-const format = require('util').format;
 
-
+// const format = require('util').format;
 
 
 var initializeFirebase = function() {
@@ -366,6 +396,72 @@ var initializeFirebase = function() {
 
 }()
 
+
+// data_params = {key: value, key1: value1}
+var updateDataRow = function(path, id, data_params, callback) {
+   
+  firebase.database().ref(path +'/' + id).update(data_params, function(err) {
+      callback(err)
+    })
+}
+
+// data_params = {key: value, key1: value1}
+var writeDataRow = function(path, data_params, callback) {
+
+  // combine 
+  var newDataRowRef = firebase.database().ref(path).push(data_params, function(err) {
+    if (err) {
+      console.log('error-writing data', err)
+    } else {
+      callback(newDataRowRef.key)
+    }
+  })
+  
+}
+
+
+//abstract this
+var readUserData = function(path, id, callback) {
+    var data = firebase.database().ref('/'+ path +'/'+ id).once('value').then(function(snapshot) {
+      callback(snapshot.val())
+    });
+  }
+
+// split up to database/read --- database/write
+app.get('/database', function(request, response) {
+
+  
+  var params = getParameters(request),
+      userID = findParameterByKey(params, 'userID'),
+      username = findParameterByKey(params, 'username'),
+      data = findParameterByKey(params, 'data')
+      
+
+  // writeDataRow('users', userID, {username: username, data: data})
+  // readUserData(userID, response)
+
+})
+
+
+
+
+/* ------------------------------------------------------------------------------------------
+   --------------------------------- Access Google Cloud Storage -------------------------------
+   ------------------------------------------------------------------------------------------
+*/
+
+const Storage = require('@google-cloud/storage')
+// Multer is required to process file uploads and make them available via req.files.
+const multer = require('multer')
+var upload = multer({
+              storage: multer.memoryStorage(),
+              limits: {
+                fileSize: 5 * 1024 * 1024 // no larger than 5mb, you can change as needed.
+              }
+            })
+
+
+
 // --------------- initialize cloud storage reference --------------
 var storageBucket = function() {
   // Your Google Cloud Platform project ID
@@ -382,8 +478,38 @@ var storageBucket = function() {
 
 
 
+// assumes input file name = 'image' --- use .any() for all files 
+app.post('/upload_image', upload.single('image'), function(request, response) {
 
-var uploadFile = function(file_name, file_data, file_type, response) {
+    if (!request.file) {
+      response.status(400).send('No file uploaded.')
+      console.log('requst strangeness')
+      return
+    } 
+
+    var file_name = 'images/'+ Date.now() + request.file.originalname, // what happens when the image is just taken and doesnt have a name?
+        file_data = request.file.buffer,
+        file_type = request.file.mimetype
+
+    uploadFile(file_name, file_data, file_type, function(data_ref, file_url, err) {
+      if (err) {
+        response.status(500).end()
+      } else {
+
+        postImageToSlack(file_url, data_ref, function(err) {
+          if(err) {
+            response.status(500).end()
+          } else {
+            response.status(200).end()
+          }
+        })
+      }
+      
+    })
+})
+
+
+var uploadFile = function(file_name, file_data, file_type, callback) {
   // Create a new blob in the bucket and upload the file data.
   const blob = storageBucket.file(file_name),
         stream = blob.createWriteStream({
@@ -393,37 +519,36 @@ var uploadFile = function(file_name, file_data, file_type, response) {
         })
 
   stream.on('error', (err) => {
-    // next(err);
-      console.log('error')
-
-    response.send(error)
+    console.error('error')
+    callback(null, null, err)
     return
   });
-  console.log('chilllin')
 
   stream.on('finish', () => {
-
-    console.log('saved')
     // using a signed URL, NOT SECURE
-    // The public URL can be used to directly access the file via HTTP.
-
     //store public url in firebase db 
     var config = {
       action: 'read',
       expires: '03-17-2025'
     };
-    blob.getSignedUrl(config, function(err, url) {
+
+    blob.getSignedUrl(config, function(err, blob_url) {
       if (err) {
         console.error(err);
-        response.send(error)
+        callback(null, null, err)
         return
       }
 
-      writeData('images', Date.now(), {url: url}) // could also send response through here
+      writeDataRow('images', {url: blob_url}, function(new_data_key) {
 
-      response.status(200).send(url);
-          console.log('url-'+url)
+        callback(new_data_key, blob_url, null)
 
+        // // post to slack with image_url = url & row_id = callback_id
+        console.log('location')
+        console.log(new_data_key)
+        // console.log('url')
+        // console.log(blob_url)
+      }) 
       // const publicUrl = format(`https://storage.googleapis.com/${storageBucket.name}/${blob.name}`);
 
     });
@@ -431,46 +556,6 @@ var uploadFile = function(file_name, file_data, file_type, response) {
 
   stream.end(file_data);
 }
-
-
-// assumes input file name = 'image' --- use .any() for all files .single('image')
-app.post('/upload', upload.single('image'), function(request, response) {
-
-    if (!request.file) {
-      response.status(400).send('No file uploaded.')
-      console.log('requst strangeness')
-
-      console.log('body')
-      console.log(request.body)
-      return
-    } 
-
-    var file_name = 'images/'+ Date.now() + request.file.originalname,
-        file_data = request.file.buffer,
-        file_type = request.file.mimetype
-
-    uploadFile(file_name, file_data, file_type, response)
-})
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // how to download to local memory not to local storage
 // do we want to download local data or do we want to just pass the link url so others can access through that???
 var downloadImage = function(image_name) {
@@ -530,43 +615,6 @@ var downloadImage = function(image_name) {
   // });
 
 }
-
-
-
-
-// data_params = {key: value, key1: value1}
-var writeData = function(path, id, data_params) {
-   
-    firebase.database().ref(path +'/' + id).set(data_params)
-    // response.end()
-  }
-
-var readUserData = function(userID, response) {
-    var data = firebase.database().ref('/users/' + userID).once('value').then(function(snapshot) {
-      var user = snapshot.val(),
-          username = user.username
-
-      doSomethingBasedOnData(username)
-      response.end()
-    });
-  }
-
-// split up to database/read --- database/write
-app.get('/database', function(request, response) {
-
-  
-  var params = getParameters(request),
-      userID = findParameterByKey(params, 'userID'),
-      username = findParameterByKey(params, 'username'),
-      data = findParameterByKey(params, 'data')
-      
-
-  // writeData('users', userID, {username: username, data: data})
-  // readUserData(userID, response)
-
-})
-
-
 
 
 
