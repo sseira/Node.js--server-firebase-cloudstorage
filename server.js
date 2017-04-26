@@ -215,16 +215,8 @@ app.get('/slack', function(request, response) {
 
 
 var postImageToSlack = function(image_url, data_key, callback) {
-
-
-  console.log('slack webhook')
-  console.log(process.env.SLACK_WEBHOOK_URL)
   var url = process.env.SLACK_WEBHOOK_URL || '',
       webhook = new SlackWebhook(url),
-      // user_params = getParameters(request),
-      // image_id = findParameterByKey(user_params, 'image_id') || 'image_id',
-      // image_url = findParameterByKey(user_params, 'image_url') || 'https://storage.googleapis.com/exampledatabase-b0ae3.appspot.com/1Seira_Santi-Final%20(1).jpg',
-      // user_message = findParameterByKey(user_params, 'text'),
       attachment = {
         attachments: [
           {
@@ -233,7 +225,19 @@ var postImageToSlack = function(image_url, data_key, callback) {
             text: "Optional text that appears within the attachment",
             image_url: image_url,
             callback_id: data_key,
-            // ts: new Date().now,
+            fields: [
+                {
+                    "title": "Yes and!",
+                    "value": 0,
+                    "short": true
+                }, 
+                {
+                    "title": "Yes but maybe...",
+                    "value": 0,
+                    "short": true
+                }
+            ],
+            ts: Date.now(),
             actions: [
                 {
                     "name": "yes_vote",
@@ -265,6 +269,18 @@ var postImageToSlack = function(image_url, data_key, callback) {
       })
 }
 
+
+
+var updateImageToShowVotes = function(message_ts, options) {
+  var token = process.env.SLACK_DOODLE_POLLSTER_TOKEN || '', //see section above on sensitive data
+      web_client = new SlackClient(token),
+      connected_server_channel_id = 'C50V9HAKT'
+
+  // attachment.attachments[0].actions = null
+
+  web_client.chat.update(message_ts, connected_server_channel_id, 'thanks for voting', options)
+
+}
 
 // can read and post winner
 var slackBot = function(callback) {
@@ -331,10 +347,12 @@ app.post('/slack-vote', function(request, response) {
       value = action.value, // YES or NO 
       path = 'images',
       id = payload.callback_id,
-      full_path = path +'/'+ id +'/'+ name ,
-      message_ts = payload.message_ts
+      full_path = path +'/'+ id +'/'+ name,
+      message_ts = payload.message_ts,
+      attachments = payload.original_message.attachments,
+      options = {attachments: attachments}
 
-
+      options.attachments[0].text = 'updated this text'
 
 
   incrementDataValue(full_path, function(err, data) {
@@ -343,6 +361,8 @@ app.post('/slack-vote', function(request, response) {
 
     //  chat.update = message_ts value from origianl_message 
     //  hide buttons 
+    //  update attachment fields with firebase vote values 
+    updateImageToShowVotes(message_ts, options)
     console.log(data)
 
     response.send({
