@@ -236,13 +236,13 @@ var postImageToSlack = function(image_url, data_key, callback) {
             // ts: new Date().now,
             actions: [
                 {
-                    "name": "vote",
+                    "name": "yes_vote",
                     "text": "Yes and!",
                     "type": "button",
                     "value": "Yes"
                 },
                 {
-                    "name": "vote",
+                    "name": "no_vote",
                     "text": "Yes, but maybe...",
                     "type": "button",
                     "value": "No"
@@ -326,40 +326,24 @@ app.post('/slack-vote', function(request, response) {
   
 
   var payload = JSON.parse(request.body.payload)
-  console.log('payload')
-  console.log(payload)
-  console.log(Object.keys(payload))
-
-  var actions = payload['actions']
-console.log('actions')
-  console.log(actions)
-
-
-
-  var action = actions[0]
-  console.log('action')
-  console.log(action)
-
-  var value = action['value']
-  console.log('value')
-  console.log(value)
-
-  var path = 'images'
-  var id = payload['callback_id']
-  console.log('id')
-  console.log(id)
-
-  var data_params = {value: value} // figure out how to increase 
+      action = payload.actions.[0],
+      name = action.name,
+      value = action.value, // YES or NO 
+      path = 'images',
+      id = payload.callback_id,
+      full_path = path +'/'+ id +'/'+ name ,
+      message_ts = payload.message_ts
 
 
 
 
-  updateDataRow(path, id, data_params, function(err) {
+  incrementDataValue(full_path, function(err, data) {
 
 
 
     //  chat.update = message_ts value from origianl_message 
-
+    //  hide buttons 
+    console.log(data)
 
     response.send({
       "response_type": "ephemeral",
@@ -410,6 +394,28 @@ var initializeFirebase = function() {
 
 }()
 
+
+
+var incrementDataValue = function(full_path, callback) {
+  // Increment value by 1.
+  var valueRef = firebase.database().ref(full_path)
+  valueRef.transaction(function(value) {
+    // If value has never been set, value will be `null`.
+    if (!value) return 1
+
+    return value + 1
+  }, function(error, committed, snapshot) {
+    if (error) {
+      console.log('Transaction failed abnormally!', error);
+    } else if (!committed) {
+      console.log('We aborted the transaction ');
+    } else {
+      console.log('value incremented!');
+    }
+    console.log("value: ", snapshot.val());
+    callback(error, snapshot.val())
+  })
+}
 
 // data_params = {key: value, key1: value1}
 var updateDataRow = function(path, id, data_params, callback) {
@@ -556,9 +562,9 @@ var uploadFile = function(file_name, file_data, file_type, callback) {
 
       var file_obj = {
         public_url: public_url,
-        time_stamp: Date.now(),
-        yes_votes: 0,
-        no_votes: 0
+        time_stamp: Date.now()
+        // yes_votes: 0,
+        // no_votes: 0
         // location???
       }
 
