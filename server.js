@@ -325,7 +325,7 @@ app.post('/slack-vote', function(request, response) {
 
   
 
-  var payload = request.body.payload
+  var payload = JSON.parse(request.body.payload)
   console.log('payload')
   console.log(payload)
   console.log(Object.keys(payload))
