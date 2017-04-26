@@ -229,7 +229,7 @@ var postImageToSlack = function(image_url, data_key, callback) {
             actions: [
                 {
                     "name": "vote",
-                    "text": data_key,//"Yes and!",
+                    "text": "Yes and!",
                     "type": "button",
                     "value": "Yes"
                 },
@@ -337,23 +337,10 @@ app.post('/slack-vote', function(request, response) {
     response.send({
       "response_type": "ephemeral",
       "replace_original": false,
-      "text": value
+      "text": 'done'
     })
   })
 
-
-
-  // response_url -> body = message
-
-
-
-
-
-  // response.send({
-  //   "response_type": "ephemeral",
-  //   "replace_original": false,
-  //   "text": "I see you"
-  // })
 })
 
 /* ------------------------------------------------------------------------------------------
@@ -532,16 +519,24 @@ var uploadFile = function(file_name, file_data, file_type, callback) {
       expires: '03-17-2025'
     };
 
-    blob.getSignedUrl(config, function(err, blob_url) {
+    blob.getSignedUrl(config, function(err, public_url) {
       if (err) {
         console.error(err);
         callback(null, null, err)
         return
       }
 
-      writeDataRow('images', {url: blob_url}, function(new_data_key) {
+      var file_obj = {
+        public_url: public_url,
+        time_stamp: new Date.now(),
+        yes_votes: 0,
+        no_votes: 0
+        // location???
+      }
 
-        callback(new_data_key, blob_url, null)
+      writeDataRow('images', file_obj, function(new_data_key) {
+
+        callback(new_data_key, public_url, null)
 
         // // post to slack with image_url = url & row_id = callback_id
         console.log('location')
