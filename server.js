@@ -384,14 +384,16 @@ app.post('/slack-vote', function(request, response) {
     //  chat.update = message_ts value from origianl_message 
     //  hide buttons 
     //  update attachment fields with firebase vote values 
-    updateImageToShowVotes(message_ts, options)
-    console.log(data)
+    updateImageToShowVotes(message_ts, options, function() {
+      console.log(data)
 
-    response.send({
-      "response_type": "ephemeral",
-      "replace_original": false,
-      "text": 'done'
+      response.send({
+        "response_type": "ephemeral",
+        "replace_original": false,
+        "text": 'vote registered'
+      })
     })
+    
   })
 
 })
