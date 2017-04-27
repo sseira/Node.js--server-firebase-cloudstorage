@@ -217,6 +217,9 @@ app.get('/slack', function(request, response) {
 var postImageToSlack = function(image_url, data_key, callback) {
   var url = process.env.SLACK_WEBHOOK_URL || '',
       webhook = new SlackWebhook(url),
+      token = process.env.SLACK_DOODLE_POLLSTER_TOKEN || '', //see section above on sensitive data
+      web_client = new SlackClient(token),
+      connected_server_channel_id = 'C50V9HAKT',
       attachment = {
         attachments: [
           {
@@ -258,7 +261,10 @@ var postImageToSlack = function(image_url, data_key, callback) {
 
       console.log(url)
       console.log('about to send')
-      webhook.send(attachment, function(err, res) {
+
+
+      // need to add slack bot to slack app 
+      postToChannelAsBot(web_client, connected_server_channel_id, 'text', attachment, function(err, res) {
         if (err) {
             console.log('Error:', err);
             callback(err)
@@ -267,6 +273,19 @@ var postImageToSlack = function(image_url, data_key, callback) {
             callback()
         }
       })
+
+
+
+      // webhook.send(attachment, function(err, res) {
+      //   if (err) {
+      //       console.log('Error:', err);
+      //       callback(err)
+      //   } else {
+      //       console.log('Message sent: ', res);
+      //       callback()
+      //   }
+      // })
+
 }
 
 
@@ -278,6 +297,7 @@ var updateImageToShowVotes = function(message_ts, options) {
 
   // attachment.attachments[0].actions = null
 
+  // can't update this message it didnt write, maybe the bot needs to update this own message
   web_client.chat.update(message_ts, connected_server_channel_id, 'thanks for voting', options)
 
 }
@@ -303,21 +323,20 @@ var slackBot = function(callback) {
  
 
 
-  readChannel(web_client, connected_server_channel_id, callback)
-  postToChannelAsBot(web_client, connected_server_channel_id, text, attachments, callback)
+  // readChannel(web_client, connected_server_channel_id, callback)
+  // postToChannelAsBot(web_client, connected_server_channel_id, text, attachment, callback)
 }
 
 
-var postToChannelAsBot = function(web_client, channel_id, text, attachments, callback) {
+var postToChannelAsBot = function(web_client, channel_id, text, attachment, callback) {
  
  web_client.chat.postMessage(channel_id, text, attachment, function(err, res) {
       if (err) {
           console.log('Error:', err)
-          callback(err)
       } else {
           console.log('Message sent: ', res)
-          callback(res)
       }
+      callback(err, res)
   })
 }
 
