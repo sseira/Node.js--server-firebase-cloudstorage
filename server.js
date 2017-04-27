@@ -422,15 +422,9 @@ var incrementDataValue = function(full_path, name, user_id, callback) {
           image[name] = 1
         }
       }
-
       return image
     }
-    // if user_id is stored in the array, has_voted, then abort transaction
 
-    // If value has never been set, value will be `null`.
-    // if (!value) return 1
-
-    // return value + 1
 
 /*
   if (post) {
