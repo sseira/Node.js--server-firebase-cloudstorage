@@ -260,10 +260,8 @@ var postImageToSlack = function(image_url, data_key, callback) {
             console.log('Error:', err);
             callback(err)
         } else {
-            // console.log('Message sent: ', res);
-            // console.log(Object.keys(res));
-            // console.log('looking for message_ts')
-            callback()
+
+            callback('image posted') // redirect back to start page
         }
       })
 }
@@ -305,41 +303,47 @@ var readChannel = function(web_client, channel_id, callback) {
 app.post('/slack-vote', function(request, response) {
 
   var payload = JSON.parse(request.body.payload)
-      action = payload.actions[0],
-      name = action.name,
-      value = action.value, // YES or NO 
-      path = 'images',
-      id = payload.callback_id,
-      full_path = path +'/'+ id +'/'+ name,
-      message_ts = payload.message_ts,
+      action  = payload.actions[0],
+      name    = action.name,
+      value   = action.value, // YES or NO 
+      path    = 'images',
+      image_id    = payload.callback_id,
+      user_id     = payload.user.id,
+      full_path   = path +'/'+ image_id,
+      message_ts  = payload.message_ts,
       attachments = payload.original_message.attachments,
-      options = {attachments: attachments},
+      options     = {attachments: attachments},
       field_index = name === 'yes_vote' ? 0 : 1
 
       options.attachments[0].text = 'updated this text'
 
 
-  incrementDataValue(full_path, function(err, data) {
+  // add server side validation to transaction 
 
+  incrementDataValue(full_path, name, user_id, function(err, already_voted, data) {
 
-
-
-    //  chat.update = message_ts value from origianl_message 
     //  hide buttons 
-    //  update attachment fields with firebase vote values 
 
+    options.attachments[0].fields[field_index].value = data.name 
 
-    options.attachments[0].fields[field_index].value = data
-    updateImageToShowVotes(message_ts, options, function() {
-      console.log('look for vote value to update attachments data')
-      console.log(data)
-
+    if (already_voted) {
       response.send({
         "response_type": "ephemeral",
         "replace_original": false,
-        "text": 'vote registered'
+        "text": 'Sorry, you can only vote once'
       })
-    })
+    } else {
+      // can i respond to it outside of the callback????
+      updateImageToShowVotes(message_ts, options, function() {
+        response.send({
+          "response_type": "ephemeral",
+          "replace_original": false,
+          "text": 'Your vote has been registered'
+        })
+     })
+    }
+
+    
     
   })
 })
@@ -395,24 +399,66 @@ var initializeFirebase = function() {
 
 
 
-var incrementDataValue = function(full_path, callback) {
-  // Increment value by 1.
-  var valueRef = firebase.database().ref(full_path)
-  valueRef.transaction(function(value) {
-    // If value has never been set, value will be `null`.
-    if (!value) return 1
+var incrementDataValue = function(full_path, name, user_id, callback) {
 
-    return value + 1
+  // could I get the path to the image object, check the users array then update if necessary?
+  var valueRef = firebase.database().ref(full_path)
+  valueRef.transaction(function(image) {
+    // var counter = name+'_count'
+
+    if (image) {
+      if (image.hasVoted[user_id]) { // has already voted, dont change
+        // how to set committed ???
+        return
+      } else {
+        if (!image.hasVoted) {
+          image.hasVoted = {}
+        }
+        image.hasVoted[user_id] = true
+
+        if (image[name]) {
+          image[name]++
+        } else {
+          image[name] = 1
+        }
+      }
+
+      return image
+    }
+    // if user_id is stored in the array, has_voted, then abort transaction
+
+    // If value has never been set, value will be `null`.
+    // if (!value) return 1
+
+    // return value + 1
+
+/*
+  if (post) {
+      if (post.stars && post.stars[uid]) {
+        post.starCount--;
+        post.stars[uid] = null;
+      } else {
+        post.starCount++;
+        if (!post.stars) {
+          post.stars = {};
+        }
+        post.stars[uid] = true;
+      }
+    }
+    return post;
+  });
+*/
+
   }, function(error, committed, snapshot) {
     if (error) {
       console.log('Transaction failed abnormally!', error);
     } else if (!committed) {
-      console.log('We aborted the transaction ');
+      console.log('User already voted');
     } else {
       console.log('value incremented!');
     }
     console.log("value: ", snapshot.val());
-    callback(error, snapshot.val())
+    callback(error, !committed, snapshot.val())
   })
 }
 
@@ -585,6 +631,8 @@ var uploadFile = function(file_name, file_data, file_type, callback) {
 
   stream.end(file_data);
 }
+
+
 // how to download to local memory not to local storage
 // do we want to download local data or do we want to just pass the link url so others can access through that???
 var downloadImage = function(image_name) {
@@ -598,50 +646,6 @@ var downloadImage = function(image_name) {
   }, function(err) {
     console.log(err)
   });
-
-
-
-// ----------- write stream --------------
-// var fs = require('fs');
-// var remoteFile = bucket.file('image.png');
-// var localFilename = '/Users/stephen/Photos/image.png';
-
-// remoteFile.createReadStream()
-//   .on('error', function(err) {})
-//   .on('response', function(response) {
-//     // Server connected and responded with the specified status and headers.
-//    })
-//   .on('end', function() {
-//     // The file is fully downloaded.
-//   })
-//   .pipe(fs.createWriteStream(localFilename));
-
-
-
-
-
-// // ---------------- GET IMAGE FILE ------------------
-
-//   image_file.get().then(function(data){
-//     var file = data[0],
-//         apiResponse = data[1]
-
-//   })
-
-// ---------------- GET IMAGE URL ------------------
-  // var config = {
-  //   action: 'read',
-  //   expires: '03-17-2025'
-  // };
-
-  // image_file.getSignedUrl(config, function(err, url) {
-  //   if (err) {
-  //     console.error(err);
-  //     return
-  //   }
-  //   console.log(url)
-
-  // });
 
 }
 
