@@ -261,7 +261,7 @@ var postImageToSlack = function(image_url, data_key, callback) {
             callback(err)
         } else {
 
-            callback('image posted') // redirect back to start page
+            callback(err) // redirect back to start page
         }
       })
 }
@@ -553,14 +553,17 @@ app.post('/upload_image', upload.single('image'), function(request, response) {
 
     uploadFile(file_name, file_data, file_type, function(data_ref, file_url, err) {
       if (err) {
+        console.log(err)
         response.status(500).end()
       } else {
 
         console.log('----- file uploaded, now posting to slack ----------')
         postImageToSlack(file_url, data_ref, function(err) {
           if(err) {
+            console.log(err)
             response.status(500).end()
           } else {
+            console.log('image posted')
             response.status(200).end()
           }
         })
@@ -603,20 +606,11 @@ var uploadFile = function(file_name, file_data, file_type, callback) {
       var file_obj = {
         public_url: public_url,
         time_stamp: Date.now()
-        // yes_votes: 0,
-        // no_votes: 0
         // location???
       }
 
       writeDataRow('images', file_obj, function(new_data_key) {
-
         callback(new_data_key, public_url, null)
-
-        // // post to slack with image_url = url & row_id = callback_id
-        console.log('location')
-        console.log(new_data_key)
-        // console.log('url')
-        // console.log(blob_url)
       }) 
       // const publicUrl = format(`https://storage.googleapis.com/${storageBucket.name}/${blob.name}`);
 
