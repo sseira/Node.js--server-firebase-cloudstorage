@@ -201,17 +201,16 @@ const SlackWebhook = require('@slack/client').IncomingWebhook,
 // image_post_request must generate an id 
 app.get('/slack', function(request, response) {
 
-  // postImageToSlack('https://storage.googleapis.com/exampledatabase-b0ae3.appspot.com/1Seira_Santi-Final%20(1).jpg', 'image_id')
+  var message_ts = '1493316783.705984'
+  updateImageToShowVotes(message_ts, null, function(something) {
+    console.log(something)
+    response.end()
+  })
 
-
-
-
-
-      // slackBot(function(data) {
-      //   response.json(data)
-      // })
 })
 
+
+// FIGURE OUT HOW TO CONNECT SLACK APP/SLACK BOT TO UPDATE INTERACTIVE MESSAGES
 
 
 var postImageToSlack = function(image_url, data_key, callback) {
@@ -220,7 +219,7 @@ var postImageToSlack = function(image_url, data_key, callback) {
       token = process.env.SLACK_DOODLE_POLLSTER_TOKEN || '', //see section above on sensitive data
       web_client = new SlackClient(token),
       connected_server_channel_id = 'C50V9HAKT',
-      attachment = {
+      options = {
         attachments: [
           {
             fallback: "Required plain-text summary of the attachment.",
@@ -256,7 +255,9 @@ var postImageToSlack = function(image_url, data_key, callback) {
                 }
             ]
           }
-        ]
+        ],
+        as_user: true,
+        username: 'the pollster'
       }
 
       console.log(url)
@@ -264,12 +265,14 @@ var postImageToSlack = function(image_url, data_key, callback) {
 
 
       // need to add slack bot to slack app 
-      postToChannelAsBot(web_client, connected_server_channel_id, 'text', attachment, function(err, res) {
+      postToChannelAsBot(web_client, connected_server_channel_id, 'text', options, function(err, res) {
         if (err) {
             console.log('Error:', err);
             callback(err)
         } else {
             console.log('Message sent: ', res);
+            console.log(Object.keys(res));
+            console.log('looking for message_ts')
             callback()
         }
       })
@@ -290,15 +293,15 @@ var postImageToSlack = function(image_url, data_key, callback) {
 
 
 
-var updateImageToShowVotes = function(message_ts, options) {
+var updateImageToShowVotes = function(message_ts, options, callback) {
   var token = process.env.SLACK_DOODLE_POLLSTER_TOKEN || '', //see section above on sensitive data
       web_client = new SlackClient(token),
       connected_server_channel_id = 'C50V9HAKT'
 
   // attachment.attachments[0].actions = null
-
+  console.log('trying')
   // can't update this message it didnt write, maybe the bot needs to update this own message
-  web_client.chat.update(message_ts, connected_server_channel_id, 'thanks for voting', options)
+  web_client.chat.update(message_ts, connected_server_channel_id, 'thanks for AGAIN', options, callback)
 
 }
 
@@ -307,18 +310,18 @@ var slackBot = function(callback) {
 
   var token = process.env.SLACK_DOODLE_POLLSTER_TOKEN || '', //see section above on sensitive data
       web_client = new SlackClient(token),
-      connected_server_channel_id = 'C50V9HAKT',
-      attachment = {
-        attachments: [
-          {
-            fallback: "Required plain-text summary of the attachment.",
-            color: "#36a64f",
-            text: "Today's winner is!",
-            ts: new Date().now,
+      connected_server_channel_id = 'C50V9HAKT'
+      // attachment = {
+      //   attachments: [
+      //     {
+      //       fallback: "Required plain-text summary of the attachment.",
+      //       color: "#36a64f",
+      //       text: "Today's winner is!",
+      //       ts:  Date.now(),
          
-          }
-        ]
-      }
+      //     }
+      //   ]
+      // }
 
  
 
@@ -331,11 +334,11 @@ var slackBot = function(callback) {
 var postToChannelAsBot = function(web_client, channel_id, text, attachment, callback) {
  
  web_client.chat.postMessage(channel_id, text, attachment, function(err, res) {
-      if (err) {
-          console.log('Error:', err)
-      } else {
-          console.log('Message sent: ', res)
-      }
+      // if (err) {
+      //     console.log('Error:', err)
+      // } else {
+      //     console.log('Message sent: ', res)
+      // }
       callback(err, res)
   })
 }
