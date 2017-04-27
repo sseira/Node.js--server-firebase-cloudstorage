@@ -194,14 +194,13 @@ app.get('/external_api', function(request, response) {
    Ex: http://localhost:5000/slack?text=hiSlack
 */
 
-const SlackWebhook = require('@slack/client').IncomingWebhook,
-      SlackClient = require('@slack/client').WebClient
+const SlackClient = require('@slack/client').WebClient
 
 // cycle through colors?
 // image_post_request must generate an id 
-app.get('/slack', function(request, response) {
+app.get('/slack_test', function(request, response) {
 
-  var message_ts = '1493316783.705984'
+  var message_ts = '1493318230.244608'
   updateImageToShowVotes(message_ts, null, function(something) {
     console.log(something)
     response.end()
@@ -210,15 +209,10 @@ app.get('/slack', function(request, response) {
 })
 
 
-// FIGURE OUT HOW TO CONNECT SLACK APP/SLACK BOT TO UPDATE INTERACTIVE MESSAGES
-
 
 var postImageToSlack = function(image_url, data_key, callback) {
-  var url = process.env.SLACK_WEBHOOK_URL || '',
-      webhook = new SlackWebhook(url),
-      token = process.env.SLACK_DOODLE_POLLSTER_TOKEN || '', //see section above on sensitive data
-      web_client = new SlackClient(token),
-      connected_server_channel_id = 'C50V9HAKT',
+  var channel_id = process.env.CONNECTED_SERVER_CHANNEL_ID,
+      slack_bot = slackBotConnectServer(),
       options = {
         attachments: [
           {
@@ -260,12 +254,8 @@ var postImageToSlack = function(image_url, data_key, callback) {
         username: 'the pollster'
       }
 
-      console.log(url)
-      console.log('about to send')
-
-
       // need to add slack bot to slack app 
-      postToChannelAsBot(web_client, connected_server_channel_id, 'text', options, function(err, res) {
+      postToChannelAsBot(slack_bot, channel_id, 'text', options, function(err, res) {
         if (err) {
             console.log('Error:', err);
             callback(err)
@@ -276,69 +266,26 @@ var postImageToSlack = function(image_url, data_key, callback) {
             callback()
         }
       })
-
-
-
-      // webhook.send(attachment, function(err, res) {
-      //   if (err) {
-      //       console.log('Error:', err);
-      //       callback(err)
-      //   } else {
-      //       console.log('Message sent: ', res);
-      //       callback()
-      //   }
-      // })
-
 }
 
 
 
 var updateImageToShowVotes = function(message_ts, options, callback) {
-  var token = process.env.SLACK_DOODLE_POLLSTER_TOKEN || '', //see section above on sensitive data
-      web_client = new SlackClient(token),
-      connected_server_channel_id = 'C50V9HAKT'
+  var slack_bot = slackBotConnectServer(),
+      channel_id = process.env.CONNECTED_SERVER_CHANNEL_ID
 
   // attachment.attachments[0].actions = null
   console.log('trying')
   // can't update this message it didnt write, maybe the bot needs to update this own message
-  web_client.chat.update(message_ts, connected_server_channel_id, 'thanks for AGAIN', options, callback)
+  slack_bot.chat.update(message_ts, channel_id, 'thanks for AGAIN', options, callback)
 
 }
 
-// can read and post winner
-var slackBot = function(callback) {
-
-  var token = process.env.SLACK_DOODLE_POLLSTER_TOKEN || '', //see section above on sensitive data
-      web_client = new SlackClient(token),
-      connected_server_channel_id = 'C50V9HAKT'
-      // attachment = {
-      //   attachments: [
-      //     {
-      //       fallback: "Required plain-text summary of the attachment.",
-      //       color: "#36a64f",
-      //       text: "Today's winner is!",
-      //       ts:  Date.now(),
-         
-      //     }
-      //   ]
-      // }
-
- 
-
-
-  // readChannel(web_client, connected_server_channel_id, callback)
-  // postToChannelAsBot(web_client, connected_server_channel_id, text, attachment, callback)
-}
 
 
 var postToChannelAsBot = function(web_client, channel_id, text, attachment, callback) {
  
  web_client.chat.postMessage(channel_id, text, attachment, function(err, res) {
-      // if (err) {
-      //     console.log('Error:', err)
-      // } else {
-      //     console.log('Message sent: ', res)
-      // }
       callback(err, res)
   })
 }
@@ -360,8 +307,6 @@ var readChannel = function(web_client, channel_id, callback) {
 
 
 app.post('/slack-vote', function(request, response) {
-
-  
 
   var payload = JSON.parse(request.body.payload)
       action = payload.actions[0],
@@ -385,6 +330,7 @@ app.post('/slack-vote', function(request, response) {
     //  hide buttons 
     //  update attachment fields with firebase vote values 
     updateImageToShowVotes(message_ts, options, function() {
+      console.log('look for vote value to update attachments data')
       console.log(data)
 
       response.send({
@@ -395,8 +341,16 @@ app.post('/slack-vote', function(request, response) {
     })
     
   })
-
 })
+
+
+var slackBotConnectServer = function() {
+  var token = process.env.SLACK_CONNECTION_BOT_TOKEN //see section above on sensitive data
+  return new SlackClient(token)
+}
+
+
+
 
 /* ------------------------------------------------------------------------------------------
    --------------------------------- Access Firebase Database -------------------------------
@@ -419,9 +373,9 @@ const firebase = require("firebase")
 
 var initializeFirebase = function() {
   var config = {
-    apiKey: "AIzaSyC-dEU8rrYcPZjIyiD5paZFaWGLrGSjK4Q",
-    authDomain: "exampledatabase-b0ae3.firebaseapp.com",
-    databaseURL: "https://exampledatabase-b0ae3.firebaseio.com"
+    apiKey: process.env.FIREBASE_API_KEY,
+    authDomain: process.env.FIREBASE_DOMAIN,
+    databaseURL: process.env.DATABASE_URL
   }
 
   firebase.initializeApp(config)
@@ -529,15 +483,16 @@ var upload = multer({
 // --------------- initialize cloud storage reference --------------
 var storageBucket = function() {
   // Your Google Cloud Platform project ID
-  const projectId = 'exampledatabase-b0ae3';
+  const projectId = process.env.STORAGE_ID,
+        storage_bucket_url = process.env.STORAGE_BUCKET_URL
 
   // Instantiates a client
   const storageClient = Storage({
     projectId: projectId,
-    keyFilename: 'private_key_SECRET.json'
+    keyFilename: process.env.STORAGE_KEY_FILENAME 
   });
 
-  return storageClient.bucket('exampledatabase-b0ae3.appspot.com')
+  return storageClient.bucket(storage_bucket_url)
 }()
 
 
@@ -716,7 +671,7 @@ prefix the waypoint with via:. Waypoints prefixed with via: will not add an entr
 
 */
 var googleMapsDirectionsClient = require('@google/maps').createClient({
-  key: 'AIzaSyDhYQs3y6neWPf1TIX_Y8IgjTtOcpSe7X0'//'AIzaSyDVl65wW5zqkICh0c1UrabLIn4MV8ryIfk'
+  key: process.env.GOOGLE_MAPS_API_KEY
 })
 
 
