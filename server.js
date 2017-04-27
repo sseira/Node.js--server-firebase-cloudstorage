@@ -250,8 +250,8 @@ var postImageToSlack = function(image_url, data_key, callback) {
             ]
           }
         ],
-        as_user: true,
-        username: 'the pollster'
+        as_user: true
+        // username: 'the pollster'
       }
 
       // need to add slack bot to slack app 
@@ -260,9 +260,9 @@ var postImageToSlack = function(image_url, data_key, callback) {
             console.log('Error:', err);
             callback(err)
         } else {
-            console.log('Message sent: ', res);
-            console.log(Object.keys(res));
-            console.log('looking for message_ts')
+            // console.log('Message sent: ', res);
+            // console.log(Object.keys(res));
+            // console.log('looking for message_ts')
             callback()
         }
       })
@@ -274,11 +274,7 @@ var updateImageToShowVotes = function(message_ts, options, callback) {
   var slack_bot = slackBotConnectServer(),
       channel_id = process.env.CONNECTED_SERVER_CHANNEL_ID
 
-  // attachment.attachments[0].actions = null
-  console.log('trying')
-  // can't update this message it didnt write, maybe the bot needs to update this own message
   slack_bot.chat.update(message_ts, channel_id, 'thanks for AGAIN', options, callback)
-
 }
 
 
@@ -317,7 +313,8 @@ app.post('/slack-vote', function(request, response) {
       full_path = path +'/'+ id +'/'+ name,
       message_ts = payload.message_ts,
       attachments = payload.original_message.attachments,
-      options = {attachments: attachments}
+      options = {attachments: attachments},
+      field_index = name === 'yes_vote' ? 0 : 1
 
       options.attachments[0].text = 'updated this text'
 
@@ -329,6 +326,9 @@ app.post('/slack-vote', function(request, response) {
     //  chat.update = message_ts value from origianl_message 
     //  hide buttons 
     //  update attachment fields with firebase vote values 
+
+
+    options.attachments[0].fields[field_index].value = data
     updateImageToShowVotes(message_ts, options, function() {
       console.log('look for vote value to update attachments data')
       console.log(data)
