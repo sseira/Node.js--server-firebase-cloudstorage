@@ -302,6 +302,7 @@ var readChannel = function(web_client, channel_id, callback) {
 //post
 app.post('/slack-vote', function(request, response) {
 
+
   var payload = JSON.parse(request.body.payload)
       action  = payload.actions[0],
       name    = action.name,
