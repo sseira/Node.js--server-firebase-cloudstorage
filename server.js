@@ -320,6 +320,13 @@ app.post('/slack-vote', function(request, response) {
 
   // add server side validation to transaction 
 
+  console.log('full_path')
+  console.log(full_path)
+  console.log('name')
+  console.log(name)
+  console.log('user_id')
+  console.log(user_id)
+
   incrementDataValue(full_path, name, user_id, function(err, already_voted, data) {
 
     //  hide buttons 
@@ -342,9 +349,6 @@ app.post('/slack-vote', function(request, response) {
         })
      })
     }
-
-    
-    
   })
 })
 
