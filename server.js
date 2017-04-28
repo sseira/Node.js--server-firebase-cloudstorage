@@ -299,7 +299,7 @@ var readChannel = function(web_client, channel_id, callback) {
   })
 }
 
-
+//post
 app.post('/slack-vote', function(request, response) {
 
   var payload = JSON.parse(request.body.payload)
@@ -319,19 +319,30 @@ app.post('/slack-vote', function(request, response) {
 
 
   // add server side validation to transaction 
+  // var full_path = 'images/-KipVEcYbmwJcywKmsDB', //+ '/time_stamp',
+  // name = 'yes_vote',
+  // user_id = 'U28N0GSG2'
 
-  console.log('full_path')
-  console.log(full_path)
-  console.log('name')
-  console.log(name)
-  console.log('user_id')
-  console.log(user_id)
+
+  // console.log('full_path')
+  // console.log(full_path)
+  // console.log('name')
+  // console.log(name)
+  // console.log('user_id')
+  // console.log(user_id)
+
+
+
+
 
   incrementDataValue(full_path, name, user_id, function(err, already_voted, data) {
 
     //  hide buttons 
 
-    options.attachments[0].fields[field_index].value = data.name 
+    options.attachments[0].fields[field_index].value = data[name] 
+
+    console.log('data has been incremented')
+    console.log(data[name])
 
     if (already_voted) {
       response.send({
@@ -407,16 +418,25 @@ var incrementDataValue = function(full_path, name, user_id, callback) {
 
   // could I get the path to the image object, check the users array then update if necessary?
   var valueRef = firebase.database().ref(full_path)
+
+  // valueRef.update({new_key: 'random'}, function(err) {
+  //   console.log('err')
+  //   console.log(err)
+  // })
+
+  console.log('about to start transaction')
   valueRef.transaction(function(image) {
     // var counter = name+'_count'
-
+    // console.log('image')
+    // console.log(image)
     if (image) {
-      if (image.hasVoted[user_id]) { // has already voted, dont change
+      if (image.hasVoted && image.hasVoted[user_id]) { // has already voted, dont change
         // how to set committed ???
         return
       } else {
         if (!image.hasVoted) {
           image.hasVoted = {}
+          // console.log('making image.hasVoted obj')
         }
         image.hasVoted[user_id] = true
 
@@ -427,25 +447,27 @@ var incrementDataValue = function(full_path, name, user_id, callback) {
         }
       }
       return image
+    } else {
+      return null // try again
     }
 
 
-/*
-  if (post) {
-      if (post.stars && post.stars[uid]) {
-        post.starCount--;
-        post.stars[uid] = null;
-      } else {
-        post.starCount++;
-        if (!post.stars) {
-          post.stars = {};
-        }
-        post.stars[uid] = true;
-      }
-    }
-    return post;
-  });
-*/
+                              /*
+                                if (post) {
+                                    if (post.stars && post.stars[uid]) {
+                                      post.starCount--;
+                                      post.stars[uid] = null;
+                                    } else {
+                                      post.starCount++;
+                                      if (!post.stars) {
+                                        post.stars = {};
+                                      }
+                                      post.stars[uid] = true;
+                                    }
+                                  }
+                                  return post;
+                                });
+                              */
 
   }, function(error, committed, snapshot) {
     if (error) {
