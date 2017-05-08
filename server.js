@@ -458,8 +458,7 @@ var updateDataRow = function(path, id, data_params, callback) {
 var writeDataRow = function(path, data_params, callback) {
 
   // combine 
-  var newDataRowRef = firebase.database().ref(path)
-  newDataRowRef.push(data_params, function(err) {
+  var newDataRowRef = firebase.database().ref(path).push(data_params, function(err) {
     if (err) {
       console.log('error-writing data', err)
     } else {
