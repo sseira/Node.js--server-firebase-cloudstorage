@@ -454,6 +454,34 @@ var updateDataRow = function(path, id, data_params, callback) {
     })
 }
 
+
+
+var updateMaxValue = function(new_value, max_ref, original_ref) {
+  var maxDataRef = firebase.database().ref(ref),
+      maxDataObj = maxDataRef.toJSON(),
+      newDataObj = {
+        value: new_value,
+        original_ref: original_ref
+      }
+
+      if(!maxDataObj) {
+        console.log('max object is null')
+        maxDataRef.set(newDataObj)
+
+      } else {
+        console.log(maxDataObj)
+
+        if (maxDataObj.value < new_value) {
+           maxDataRef.set(newDataObj)
+        }
+      }
+
+
+ // calculate max votes
+        // if max = null, this = max
+        // else if this>max, max = this
+}
+
 // data_params = {key: value, key1: value1}
 var writeDataRow = function(path, data_params, callback) {
 
@@ -465,12 +493,14 @@ var writeDataRow = function(path, data_params, callback) {
       var new_path = path+'/'+newDataRowRef.key
 
       listenForChanges(new_path, function(data){
-
-        // calculate max votes
-        // if max = null, this = max
-        // else if this>max, max = this
         console.log('heard an event!')
-        console.log(data)
+        // coul
+        updateMaxValue(data.yes_vote, 'yes_max', newDataRowRef.key)
+        updateMaxValue(data.no_vote, 'no_max', newDataRowRef.key)
+      
+      
+        console.log(data.yes_vote)
+        console.log(data.no_vote)
       })
 
 
