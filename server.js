@@ -469,8 +469,6 @@ var writeDataRow = function(path, data_params, callback) {
         // calculate max votes
         // if max = null, this = max
         // else if this>max, max = this
-
-
         console.log('heard an event!')
         console.log(data)
       })
