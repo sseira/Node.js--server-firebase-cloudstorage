@@ -462,10 +462,10 @@ var writeDataRow = function(path, data_params, callback) {
     if (err) {
       console.log('error-writing data', err)
     } else {
-      // listenForChanges(newDataRowRef, function(data){
-      //   console.log('heard an event!')
-      //   console.log(data)
-      // })
+      listenForChanges(newDataRowRef, function(data){
+        console.log('heard an event!')
+        console.log(data)
+      })
 
 
       callback(newDataRowRef.key)
