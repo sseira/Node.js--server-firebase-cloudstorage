@@ -462,10 +462,18 @@ var writeDataRow = function(path, data_params, callback) {
     if (err) {
       console.log('error-writing data', err)
     } else {
-      // listenForChanges(newDataRowRef, function(data){
-      //   console.log('heard an event!')
-      //   console.log(data)
-      // })
+      var new_path = path+'/'+newDataRowRef.key
+
+      listenForChanges(new_path, function(data){
+
+        // calculate max votes
+        // if max = null, this = max
+        // else if this>max, max = this
+
+
+        console.log('heard an event!')
+        console.log(data)
+      })
 
 
       callback(newDataRowRef.key)
@@ -501,7 +509,7 @@ app.get('/database', function(request, response) {
 
 // does this 
 var listenForChanges = function(db_ref, callback) {
-  var tableRef = firebase.database().ref('users/');
+  var tableRef = firebase.database().ref(db_ref);
 
   tableRef.on('value', function(snapshot) {
     callback(snapshot.val())
