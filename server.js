@@ -495,8 +495,8 @@ var writeDataRow = function(path, data_params, callback) {
       listenForChanges(new_path, function(data){
         console.log('heard an event!')
         // coul
-        updateMaxValue(data.yes_vote, 'yes_max', newDataRowRef.key)
-        updateMaxValue(data.no_vote, 'no_max', newDataRowRef.key)
+        // updateMaxValue(data.yes_vote, 'yes_max', newDataRowRef.key)
+        // updateMaxValue(data.no_vote, 'no_max', newDataRowRef.key)
       
       
         console.log(data.yes_vote)
