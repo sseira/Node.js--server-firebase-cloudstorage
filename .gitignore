@@ -10,3 +10,7 @@ npm-debug.log
 # Docker
 Dockerfile
 docker-compose.yml
+
+# Cloud Storage private key
+private_key.json
+## TODO: add filename of private key

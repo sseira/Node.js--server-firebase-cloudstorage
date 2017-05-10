@@ -1,0 +1,7 @@
+FIREBASE_API_KEY=xxxxxxxxxxx
+FIREBASE_AUTH_DOMAIN=xxxxxxxxxxx.firebaseapp.com
+FIREBASE_DATABASE_URL=https://xxxxxxxxxxx.firebaseio.com
+
+STORAGE_KEY_FILENAME=private_key.json
+PROJECT_ID=xxxxxxxxxxx
+STORAGE_BUCKET=xxxxxxxxxxx.appspot.com
